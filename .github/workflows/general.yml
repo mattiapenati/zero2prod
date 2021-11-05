@@ -38,6 +38,7 @@ jobs:
         with:
           path: |
             ~/.cargo/bin/sqlx
+            ~/.cargo/bin/cargo-sqlx
           key: ${{ runner.os }}-sqlx-cli-${{ hashFiles('**/Cargo.lock') }}
       - name: Install sqlx-cli
         uses: actions-rs/cargo@v1
