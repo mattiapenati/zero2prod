@@ -8,8 +8,7 @@ impl TryFrom<&str> for SubscriberName {
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         const MAXIMUM_LENGTH: usize = 256;
-        const FORBIDDEN_CHARACTERS: &'static [char] =
-            &['/', '(', ')', '"', '<', '>', '\\', '{', '}'];
+        const FORBIDDEN_CHARACTERS: &[char] = &['/', '(', ')', '"', '<', '>', '\\', '{', '}'];
 
         let is_empty_or_whitespace = value.trim().is_empty();
         let is_tool_long = value.graphemes(true).count() > MAXIMUM_LENGTH;
