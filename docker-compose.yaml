@@ -1,0 +1,44 @@
+version: "3.9"
+services:
+  postgres-db:
+    image: postgres:9.6.23-alpine3.14
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=newsletter
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres", "-d", "newsletter"]
+      start_period: 5s
+      interval: 5s
+    networks:
+      - zero2prod-network
+
+  zero2prod-migrate:
+    build:
+      context: .
+    image: zero2prod
+    command: ["migrate", "--retry", "10", "--retry-delay", "2"]
+    environment:
+      - APP_DATABASE__HOST=postgres-db
+    depends_on:
+      - postgres-db
+    networks:
+      - zero2prod-network
+
+  zero2prod:
+    build:
+      context: .
+    image: zero2prod
+    command: ["serve"]
+    environment:
+      - APP_DATABASE__HOST=postgres-db
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres-db
+    networks:
+      - zero2prod-network
+
+networks:
+  zero2prod-network:
+    driver: bridge

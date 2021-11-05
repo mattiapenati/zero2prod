@@ -5,7 +5,7 @@ use crate::{
 
 use std::{net::TcpListener, sync::Arc};
 
-use axum::{handler, AddExtensionLayer, Router};
+use axum::{routing, AddExtensionLayer, Router};
 use hyper::{Result, Server};
 use sqlx::PgPool;
 use tower::ServiceBuilder;
@@ -19,8 +19,8 @@ pub async fn run(listener: TcpListener, db_pool: PgPool) -> Result<()> {
         .into_inner();
 
     let app = Router::new()
-        .route("/health_check", handler::get(routes::health_check))
-        .route("/subscriptions", handler::post(routes::subscribe))
+        .route("/health_check", routing::get(routes::health_check))
+        .route("/subscriptions", routing::post(routes::subscribe))
         .layer(middleware);
 
     Server::from_tcp(listener)?
