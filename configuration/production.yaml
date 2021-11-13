@@ -1,2 +1,5 @@
 application:
   host: 0.0.0.0
+email_client:
+  base_url: "https://api.postmarkapp.com"
+  sender_email: "supercoolname@gmail.com"

@@ -1,14 +1,22 @@
 use validator::validate_email;
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct SubscriberEmail(String);
 
 impl TryFrom<&str> for SubscriberEmail {
     type Error = String;
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
-        if validate_email(value) {
-            Ok(Self(value.into()))
+        Self::try_from(value.to_owned())
+    }
+}
+
+impl TryFrom<String> for SubscriberEmail {
+    type Error = String;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        if validate_email(&value) {
+            Ok(Self(value))
         } else {
             Err(format!("{} is not a valid subscriber email.", value))
         }
@@ -31,18 +39,18 @@ mod tests {
 
     #[test]
     fn empty_string_is_rejected() {
-        let email = "".to_string();
-        assert_err!(SubscriberEmail::try_from(email.as_str()));
+        let email = "";
+        assert_err!(SubscriberEmail::try_from(email));
     }
     #[test]
     fn email_missing_at_symbol_is_rejected() {
-        let email = "ursuladomain.com".to_string();
-        assert_err!(SubscriberEmail::try_from(email.as_str()));
+        let email = "ursuladomain.com";
+        assert_err!(SubscriberEmail::try_from(email));
     }
     #[test]
     fn email_missing_subject_is_rejected() {
-        let email = "@domain.com".to_string();
-        assert_err!(SubscriberEmail::try_from(email.as_str()));
+        let email = "@domain.com";
+        assert_err!(SubscriberEmail::try_from(email));
     }
 
     #[derive(Debug, Clone)]
@@ -56,6 +64,6 @@ mod tests {
 
     #[quickcheck_macros::quickcheck]
     fn valid_emails_are_parsed_successfully(valid_email: ValidEmail) -> bool {
-        SubscriberEmail::try_from(valid_email.0.as_str()).is_ok()
+        SubscriberEmail::try_from(valid_email.0).is_ok()
     }
 }

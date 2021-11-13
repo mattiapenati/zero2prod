@@ -1,10 +1,8 @@
-use std::net::TcpListener;
-
 use sqlx::postgres::PgPoolOptions;
 use structopt::StructOpt;
 use zero2prod::{
     configuration::get_configuration,
-    startup::run,
+    startup::Application,
     telemetry::{get_subscriber, init_subscriber},
 };
 
@@ -31,50 +29,51 @@ enum Opt {
     Serve,
 }
 
+async fn migrate(opt: Migrate) {
+    let configuration = get_configuration().expect("Failed to read configuration");
+
+    for retry in 0..=opt.retry {
+        if retry > 0 {
+            println!("Retry number {} (waiting {}s)", retry, opt.retry_delay);
+            std::thread::sleep(std::time::Duration::from_secs(opt.retry_delay));
+        }
+
+        match PgPoolOptions::new()
+            .connect_timeout(std::time::Duration::from_secs(opt.timeout))
+            .connect_with(configuration.database.with_db())
+            .await
+        {
+            Ok(pool) => {
+                sqlx::migrate!("./migrations")
+                    .run(&pool)
+                    .await
+                    .expect("Failed to migrate the database");
+
+                println!("Migration completed with success");
+                std::process::exit(0);
+            }
+            Err(e) => {
+                println!("Failed to connect: {}", e);
+            }
+        }
+    }
+    std::process::exit(1);
+}
+
+async fn run() -> hyper::Result<()> {
+    let configuration = get_configuration().expect("Failed to read configuration");
+
+    Application::build(configuration).run().await
+}
+
 #[tokio::main]
-async fn main() {
+async fn main() -> hyper::Result<()> {
     let subscriber = get_subscriber("zero2prod", "info", std::io::stdout);
     init_subscriber(subscriber);
 
-    let configuration = get_configuration().expect("Failed to read configuration");
-
     match Opt::from_args() {
-        Opt::Migrate(opt) => {
-            for retry in 0..=opt.retry {
-                if retry > 0 {
-                    println!("Retry number {} (waiting {}s)", retry, opt.retry_delay);
-                    std::thread::sleep(std::time::Duration::from_secs(opt.retry_delay));
-                }
-
-                match PgPoolOptions::new()
-                    .connect_timeout(std::time::Duration::from_secs(opt.timeout))
-                    .connect_with(configuration.database.with_db())
-                    .await
-                {
-                    Ok(pool) => {
-                        sqlx::migrate!("./migrations")
-                            .run(&pool)
-                            .await
-                            .expect("Failed to migrate the database");
-
-                        println!("Migration completed with success");
-                        std::process::exit(0);
-                    }
-                    Err(e) => {
-                        println!("Failed to connect: {}", e);
-                    }
-                }
-            }
-            std::process::exit(1);
-        }
-        Opt::Serve => {
-            let connection_pool = PgPoolOptions::new()
-                .connect_timeout(std::time::Duration::from_secs(2))
-                .connect_lazy_with(configuration.database.with_db());
-
-            let listener = TcpListener::bind(&configuration.application.address()).unwrap();
-
-            run(listener, connection_pool).await.unwrap();
-        }
+        Opt::Migrate(opt) => migrate(opt).await,
+        Opt::Serve => run().await?,
     }
+    Ok(())
 }
