@@ -1,6 +1,6 @@
 name: General
 
-on: [push]
+on: [push, pull_request]
 
 jobs:
   test:
@@ -16,23 +16,11 @@ jobs:
         ports:
           - 5432:5432
     steps:
-      - name: Checkout repository
+      - name: Setup | Checkout repository
         uses: actions/checkout@v2
-      - name: Cache dependencies
-        uses: actions/cache@v2
-        with:
-          path: |
-            ~/.cargo/registry/
-            ~/.cargo/git/
-            target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-      - name: Install stable toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
-      - name: Cache sqlx-cli
+      - name: Setup | Cache rust
+        uses: Swatinem/rust-cache@v1
+      - name: Setup | Cache sqlx-cli
         uses: actions/cache@v2
         id: cache-sqlx
         with:
@@ -40,75 +28,29 @@ jobs:
             ~/.cargo/bin/sqlx
             ~/.cargo/bin/cargo-sqlx
           key: ${{ runner.os }}-sqlx-cli-${{ hashFiles('**/Cargo.lock') }}
-      - name: Install sqlx-cli
-        uses: actions-rs/cargo@v1
-        if: steps.cache-sqlx.outputs.cache-hit == false
-        with:
-          command: install
-          args: sqlx-cli --version=0.5.9 --force --no-default-features --features=postgres
-      - name: Migrate database
-        run: |
-          sudo apt-get install libpq-dev -y
-          SKIP_DOCKER=yes ./scripts/init_db.sh
-      - name: Check sqlx-data.json is up-to-date
-        run: |
-          cargo sqlx prepare --check -- --bin zero2prod
-      - name: Run cargo test
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-
-  clippy:
-    name: Clippy
-    runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: password
-          POSTGRES_DB: newsletter
-        ports:
-          - 5432:5432
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
-      - name: Cache dependencies
-        uses: actions/cache@v2
-        with:
-          path: |
-            ~/.cargo/registry/
-            ~/.cargo/git/
-            target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-      - name: Install stable toolchain
+      - name: Setup | Setup rust toolchain
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
           toolchain: stable
           override: true
-      - name: Cache sqlx-cli
-        uses: actions/cache@v2
-        id: cache-sqlx
-        with:
-          path: |
-            ~/.cargo/bin/sqlx
-          key: ${{ runner.os }}-sqlx-cli-${{ hashFiles('**/Cargo.lock') }}
-      - name: Install sqlx-cli
+      - name: Setup | Install sqlx-cli
         uses: actions-rs/cargo@v1
         if: steps.cache-sqlx.outputs.cache-hit == false
         with:
           command: install
           args: sqlx-cli --version=0.5.9 --force --no-default-features --features=postgres
-      - name: Migrate database
+      - name: Setup | Migrate database
         run: |
           sudo apt-get install libpq-dev -y
           SKIP_DOCKER=yes ./scripts/init_db.sh
-      - name: Run clippy
-        uses: actions-rs/clippy-check@v1
+      - name: Check | Check sqlx-data.json is up-to-date
+        run: |
+          cargo sqlx prepare --check -- --bin zero2prod
+      - name: Build | Run cargo test
+        uses: actions-rs/cargo@v1
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          args: -- -D warnings
+          command: test
 
   coverage:
     name: Coverage
@@ -123,66 +65,83 @@ jobs:
         ports:
           - 5432:5432
     steps:
-      - name: Checkout repository
+      - name: Setup | Checkout repository
         uses: actions/checkout@v2
-      - name: Cache dependencies
-        uses: actions/cache@v2
-        with:
-          path: |
-            ~/.cargo/registry/
-            ~/.cargo/git/
-            target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-      - name: Install stable toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
-      - name: Cache sqlx-cli
+      - name: Setup | Cache rust
+        uses: Swatinem/rust-cache@v1
+      - name: Setup | Cache sqlx-cli
         uses: actions/cache@v2
         id: cache-sqlx
         with:
           path: |
             ~/.cargo/bin/sqlx
+            ~/.cargo/bin/cargo-sqlx
           key: ${{ runner.os }}-sqlx-cli-${{ hashFiles('**/Cargo.lock') }}
-      - name: Install sqlx-cli
+      - name: Setup | Setup rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+      - name: Setup | Install sqlx-cli
         uses: actions-rs/cargo@v1
         if: steps.cache-sqlx.outputs.cache-hit == false
         with:
           command: install
           args: sqlx-cli --version=0.5.9 --force --no-default-features --features=postgres
-      - name: Migrate database
+      - name: Setup | Migrate database
         run: |
           sudo apt-get install libpq-dev -y
           SKIP_DOCKER=yes ./scripts/init_db.sh
-      - name: Run cargo-tarpaulin
+      - name: Build | Run cargo-tarpaulin
         uses: actions-rs/tarpaulin@v0.1
         with:
           args: --ignore-tests --avoid-cfg-tarpaulin
-      - name: Upload to codecov.io
+      - name: Post Build | Upload to codecov.io
         uses: codecov/codecov-action@v1.0.2
         with:
           token: ${{secrets.CODECOV_TOKEN}}
-      - name: Archive code coverage results
+      - name: Post Build | Archive code coverage results
         uses: actions/upload-artifact@v1
         with:
           name: code-coverage-report
           path: cobertura.xml
 
+  clippy:
+    name: Clippy
+    runs-on: ubuntu-latest
+    env:
+      SQLX_OFFLINE: "true"
+    steps:
+      - name: Setup | Checkout repository
+        uses: actions/checkout@v2
+      - name: Setup | Cache rust
+        uses: Swatinem/rust-cache@v1
+      - name: Setup | Setup rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+      - name: Check | Run clippy
+        uses: actions-rs/clippy-check@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          args: -- -D warnings
+
   fmt:
     name: Formatting
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
+      - name: Setup | Checkout repository
         uses: actions/checkout@v2
-      - name: Install stable toolchain
+      - name: Setup | Install rust toolchain
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
           override: true
           components: rustfmt
-      - name: Check formatting
+      - name: Check | Formatting
         uses: actions-rs/cargo@v1
         with:
           command: fmt
