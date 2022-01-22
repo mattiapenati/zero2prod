@@ -11,9 +11,10 @@ use axum::{routing, AddExtensionLayer, Router};
 use sqlx::postgres::{PgPool, PgPoolOptions};
 use tower::ServiceBuilder;
 use tower_http::{
-    trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer},
+    trace::{DefaultMakeSpan, TraceLayer},
     ServiceBuilderExt,
 };
+use tracing::Level;
 
 pub struct Application {
     app: Router,
@@ -50,8 +51,12 @@ impl Application {
             .propagate_x_request_id()
             .layer(
                 TraceLayer::new_for_http()
-                    .make_span_with(DefaultMakeSpan::new().include_headers(true))
-                    .on_response(DefaultOnResponse::new().include_headers(true)),
+                    .make_span_with(
+                        DefaultMakeSpan::new()
+                            .include_headers(true)
+                            .level(Level::INFO),
+                    )
+                    .on_failure(()),
             )
             .layer(AddExtensionLayer::new(db_pool))
             .layer(AddExtensionLayer::new(email_client))

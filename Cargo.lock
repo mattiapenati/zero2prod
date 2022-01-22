@@ -2425,6 +2425,7 @@ dependencies = [
 name = "zero2prod"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "axum",
  "chrono",
  "claim",
@@ -2444,6 +2445,7 @@ dependencies = [
  "serde_json",
  "sqlx",
  "structopt",
+ "thiserror",
  "tokio",
  "tower",
  "tower-http",
