@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+anyhow = "1"
 axum = "0.4.4"
 chrono = "0.4.19"
 config = "0.11.0"
@@ -18,9 +19,10 @@ reqwest = { version = "0.11.9", default-features = false, features = [
 serde = { version = "1.0.134", features = ["derive"] }
 serde-aux = "3.0.1"
 structopt = "0.3.26"
+thiserror = "1"
 tokio = { version = "1.15.0", features = ["macros", "rt-multi-thread"] }
 tower = "0.4.11"
-tower-http = { version = "0.2.1", features = ["trace"] }
+tower-http = { version = "0.2.1", features = ["trace", "request-id", "util"] }
 tracing = { version = "0.1.29", features = ["log"] }
 tracing-bunyan-formatter = "0.3.2"
 tracing-futures = "0.2.5"
