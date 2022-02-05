@@ -1,7 +1,7 @@
 use crate::{
     configuration::{DatabaseSettings, Settings},
     email_client::EmailClient,
-    request_id::MakeRequestUuid,
+    request_id::{AddRequestIdLayer, MakeSpanWithRequestId, UseRequestId},
     routes,
 };
 
@@ -10,10 +10,7 @@ use std::{net::TcpListener, time::Duration};
 use axum::{routing, AddExtensionLayer, Router};
 use sqlx::postgres::{PgPool, PgPoolOptions};
 use tower::ServiceBuilder;
-use tower_http::{
-    trace::{DefaultMakeSpan, TraceLayer},
-    ServiceBuilderExt,
-};
+use tower_http::{trace::TraceLayer, ServiceBuilderExt};
 use tracing::Level;
 
 pub struct Application {
@@ -47,17 +44,14 @@ impl Application {
         let application_base_url = ApplicationBaseUrl(settings.application.base_url.clone());
 
         let middleware = ServiceBuilder::new()
-            .set_x_request_id(MakeRequestUuid)
-            .propagate_x_request_id()
+            .layer(AddRequestIdLayer)
             .layer(
                 TraceLayer::new_for_http()
-                    .make_span_with(
-                        DefaultMakeSpan::new()
-                            .include_headers(true)
-                            .level(Level::INFO),
-                    )
+                    .make_span_with(MakeSpanWithRequestId::default().level(Level::INFO))
                     .on_failure(()),
             )
+            .set_x_request_id(UseRequestId)
+            .propagate_x_request_id()
             .layer(AddExtensionLayer::new(db_pool))
             .layer(AddExtensionLayer::new(email_client))
             .layer(AddExtensionLayer::new(application_base_url))
