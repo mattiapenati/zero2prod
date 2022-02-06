@@ -61,6 +61,7 @@ impl Application {
             .route("/health_check", routing::get(routes::health_check))
             .route("/subscriptions", routing::post(routes::subscribe))
             .route("/subscriptions/confirm", routing::get(routes::confirm))
+            .route("/newsletters", routing::post(routes::publish_newsletter))
             .layer(middleware);
 
         let listener = TcpListener::bind(&settings.application.address()).unwrap();
