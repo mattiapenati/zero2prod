@@ -41,7 +41,7 @@ impl TestApp {
             .expect("Failed to execute request")
     }
 
-    pub fn get_confirmation_link(&self, email_request: &wiremock::Request) -> ConfirmationLinks {
+    pub fn get_confirmation_links(&self, email_request: &wiremock::Request) -> ConfirmationLinks {
         let body: serde_json::Value = serde_json::from_slice(&email_request.body).unwrap();
 
         let get_link = |s: &str| {
@@ -64,6 +64,15 @@ impl TestApp {
             html: get_link(body["HtmlBody"].as_str().unwrap()),
             text: get_link(body["TextBody"].as_str().unwrap()),
         }
+    }
+
+    pub async fn post_newsletters(&self, body: serde_json::Value) -> reqwest::Response {
+        reqwest::Client::new()
+            .post(&format!("{}/newsletters", &self.address))
+            .json(&body)
+            .send()
+            .await
+            .expect("Failed to execute request.")
     }
 }
 

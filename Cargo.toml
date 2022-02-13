@@ -10,7 +10,7 @@ axum = "0.4.5"
 chrono = "0.4.19"
 config = "0.11.0"
 http = "0.2.6"
-hyper = "0.14.16"
+hyper = "0.14.17"
 log = "0.4.14"
 rand = { version = "0.8.4", features = ["std_rng"] }
 reqwest = { version = "0.11.9", default-features = false, features = [
@@ -23,7 +23,7 @@ structopt = "0.3.26"
 thiserror = "1"
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 tower = "0.4.11"
-tower-http = { version = "0.2.1", features = ["trace", "request-id", "util"] }
+tower-http = { version = "0.2.2", features = ["trace", "request-id", "util"] }
 tracing = { version = "0.1.30", features = ["log"] }
 tracing-bunyan-formatter = "0.3.2"
 tracing-futures = "0.2.5"
@@ -33,7 +33,7 @@ tracing-subscriber = { version = "0.3.8", features = [
     "env-filter",
 ] }
 uuid = { version = "0.8.2", features = ["v4"] }
-unicode-segmentation = "1.8.0"
+unicode-segmentation = "1.9.0"
 validator = "0.14.0"
 
 [dependencies.sqlx]
