@@ -50,7 +50,7 @@ pub async fn publish_newsletter(
 ) -> Result<(), Error> {
     let subscribers = get_confirmed_subscribers(&pool)
         .await
-        .map_err(|e| PublishError::UnexpectedError(e))?;
+        .map_err(PublishError::UnexpectedError)?;
 
     for subscriber in subscribers {
         match subscriber {
@@ -66,7 +66,7 @@ pub async fn publish_newsletter(
                     .with_context(|| {
                         format!("Failed to send newsletter issue to {}", subscriber.email)
                     })
-                    .map_err(|e| PublishError::UnexpectedError(e))?;
+                    .map_err(PublishError::UnexpectedError)?;
             }
             Err(error) => {
                 tracing::warn!(
