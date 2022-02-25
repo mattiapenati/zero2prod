@@ -53,7 +53,7 @@ async fn newsletters_are_delivered_to_confirmed_subscribers() {
 }
 
 #[tokio::test]
-async fn newsletters_returns_400_for_invalid_data() {
+async fn newsletters_returns_422_for_invalid_data() {
     let app = spawn_app().await;
     let test_cases = vec![
         (
@@ -77,7 +77,7 @@ async fn newsletters_returns_400_for_invalid_data() {
         assert_eq!(
             response.status().as_u16(),
             422,
-            "The API did not fail with 400 Bad Request when the payload was {}.",
+            "The API did not fail with 422 Unprocessable Entity when the payload was {}.",
             error_message
         );
     }
