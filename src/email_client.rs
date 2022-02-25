@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use crate::domain::SubscriberEmail;
+use crate::domain::EmailAddress;
 
 use reqwest::Client;
 use serde::Serialize;
@@ -9,14 +9,14 @@ use serde::Serialize;
 pub struct EmailClient {
     http_client: Client,
     base_url: String,
-    sender: SubscriberEmail,
+    sender: EmailAddress,
     authorization_token: String,
 }
 
 impl EmailClient {
     pub fn new(
         base_url: &str,
-        sender: SubscriberEmail,
+        sender: EmailAddress,
         authorization_token: &str,
         timeout: Duration,
     ) -> Self {
@@ -34,7 +34,7 @@ impl EmailClient {
 
     pub async fn send_email(
         &self,
-        recipient: &SubscriberEmail,
+        recipient: &EmailAddress,
         subject: &str,
         html_content: &str,
         text_content: &str,
@@ -75,7 +75,7 @@ mod tests {
 
     use super::EmailClient;
 
-    use crate::domain::SubscriberEmail;
+    use crate::domain::EmailAddress;
 
     use claim::{assert_err, assert_ok};
     use fake::{
@@ -115,8 +115,8 @@ mod tests {
         Paragraph(1..10).fake()
     }
 
-    fn email() -> SubscriberEmail {
-        SubscriberEmail::try_from(SafeEmail().fake::<String>()).unwrap()
+    fn email() -> EmailAddress {
+        SafeEmail().fake::<String>().parse().unwrap()
     }
 
     fn email_client(base_url: &str) -> EmailClient {

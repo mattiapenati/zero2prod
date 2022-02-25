@@ -10,7 +10,7 @@ use sqlx::{PgPool, Postgres, Transaction};
 use uuid::Uuid;
 
 use crate::{
-    domain::{NewSubscriber, SubscriberEmail, SubscriberName},
+    domain::{EmailAddress, SubscriberName},
     email_client::EmailClient,
     error::{Error, ResponseError},
     startup::ApplicationBaseUrl,
@@ -18,8 +18,8 @@ use crate::{
 
 #[derive(Deserialize)]
 pub struct FormData {
-    email: String,
-    name: String,
+    email: EmailAddress,
+    name: SubscriberName,
 }
 
 #[derive(thiserror::Error)]
@@ -28,17 +28,6 @@ pub enum SubscribeError {
     ValidationError(String),
     #[error(transparent)]
     UnexpectedError(#[from] anyhow::Error),
-}
-
-impl TryFrom<FormData> for NewSubscriber {
-    type Error = String;
-
-    fn try_from(value: FormData) -> Result<Self, Self::Error> {
-        let email = SubscriberEmail::try_from(value.email)?;
-        let name = SubscriberName::try_from(value.name)?;
-
-        Ok(Self { email, name })
-    }
 }
 
 impl fmt::Debug for SubscribeError {
@@ -70,13 +59,12 @@ pub async fn subscribe(
     Extension(email_client): Extension<EmailClient>,
     Extension(base_url): Extension<ApplicationBaseUrl>,
 ) -> Result<(), Error> {
-    let new_subscriber = data.try_into().map_err(SubscribeError::ValidationError)?;
     let mut transaction = pool
         .begin()
         .await
         .context("failed to acquire a Postgres connection from the pool")
         .map_err(SubscribeError::from)?;
-    let subscriber_id = insert_subscriber(&mut transaction, &new_subscriber)
+    let subscriber_id = insert_subscriber(&mut transaction, &data)
         .await
         .context("failed to insert new subscriber in the database")
         .map_err(SubscribeError::from)?;
@@ -92,7 +80,7 @@ pub async fn subscribe(
         .map_err(SubscribeError::from)?;
     send_confirmation_email(
         &email_client,
-        new_subscriber,
+        &data.email,
         base_url.as_str(),
         &subscription_token,
     )
@@ -108,7 +96,7 @@ pub async fn subscribe(
 )]
 async fn insert_subscriber(
     transaction: &mut Transaction<'_, Postgres>,
-    new_subscriber: &NewSubscriber,
+    new_subscriber: &FormData,
 ) -> Result<Uuid, sqlx::Error> {
     let subscriber_id = Uuid::new_v4();
 
@@ -146,11 +134,11 @@ async fn store_token(
 
 #[tracing::instrument(
     name = "Send a confirmation email to a new subscriber",
-    skip(email_client, new_subscriber, base_url, token)
+    skip(email_client, address, base_url, token)
 )]
 async fn send_confirmation_email(
     email_client: &EmailClient,
-    new_subscriber: NewSubscriber,
+    address: &EmailAddress,
     base_url: &str,
     token: &str,
 ) -> Result<(), reqwest::Error> {
@@ -167,7 +155,7 @@ async fn send_confirmation_email(
     );
 
     email_client
-        .send_email(&new_subscriber.email, "Welcome!", &html_body, &text_body)
+        .send_email(address, "Welcome!", &html_body, &text_body)
         .await
 }
 

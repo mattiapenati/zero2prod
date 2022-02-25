@@ -7,7 +7,7 @@ use serde::Deserialize;
 use sqlx::PgPool;
 
 use crate::{
-    domain::SubscriberEmail,
+    domain::EmailAddress,
     email_client::EmailClient,
     error::{Error, ResponseError},
 };
@@ -81,7 +81,7 @@ pub async fn publish_newsletter(
 }
 
 struct ConfirmedSubscriber {
-    email: SubscriberEmail,
+    email: EmailAddress,
 }
 
 #[tracing::instrument(name = "Get confirmed subscribers", skip(pool))]
@@ -94,7 +94,8 @@ async fn get_confirmed_subscribers(
             .await?
             .into_iter()
             .map(|r| {
-                SubscriberEmail::try_from(r.email)
+                r.email
+                    .parse::<EmailAddress>()
                     .map(|email| ConfirmedSubscriber { email })
                     .map_err(|e| anyhow::anyhow!(e))
             })

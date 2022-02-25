@@ -7,7 +7,7 @@ use sqlx::{
     ConnectOptions,
 };
 
-use crate::domain::SubscriberEmail;
+use crate::domain::{self, EmailAddress};
 
 #[derive(Deserialize)]
 pub struct Settings {
@@ -74,8 +74,8 @@ impl ApplicationSettings {
 }
 
 impl EmailClientSettings {
-    pub fn sender(&self) -> Result<SubscriberEmail, String> {
-        SubscriberEmail::try_from(self.sender_email.as_str())
+    pub fn sender(&self) -> Result<EmailAddress, domain::email_address::ParseEmailAddressError> {
+        self.sender_email.parse()
     }
 
     pub fn timeout(&self) -> Duration {
