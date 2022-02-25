@@ -67,7 +67,7 @@ impl Application {
                 "/subscriptions/confirm",
                 routing::get(routes::subscriptions::confirm::handler),
             )
-            .route("/newsletters", routing::post(routes::publish_newsletter))
+            .route("/newsletters", routing::post(routes::newsletters::handler))
             .layer(middleware);
 
         let listener = TcpListener::bind(&settings.application.address()).unwrap();
