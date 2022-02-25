@@ -1,3 +1,5 @@
+pub mod confirm;
+
 use anyhow::Context;
 use axum::{
     extract::{Extension, Form},

@@ -63,7 +63,10 @@ impl Application {
                 "/subscriptions",
                 routing::post(routes::subscriptions::handler),
             )
-            .route("/subscriptions/confirm", routing::get(routes::confirm))
+            .route(
+                "/subscriptions/confirm",
+                routing::get(routes::subscriptions::confirm::handler),
+            )
             .route("/newsletters", routing::post(routes::publish_newsletter))
             .layer(middleware);
 
