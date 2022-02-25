@@ -54,7 +54,7 @@ async fn subscribe_returns_a_400_when_data_is_missing() {
 
         assert_eq!(
             response.status().as_u16(),
-            400,
+            422,
             "The API did not fail with 400 Bad Request when the payload was {}.",
             error_message,
         );
