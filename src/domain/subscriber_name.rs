@@ -1,33 +1,43 @@
+use serde_with::{DeserializeFromStr, SerializeDisplay};
 use unicode_segmentation::UnicodeSegmentation;
 
-#[derive(Debug)]
+#[derive(Clone, Debug, SerializeDisplay, DeserializeFromStr)]
 pub struct SubscriberName(String);
 
-impl TryFrom<&str> for SubscriberName {
-    type Error = String;
-
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
-        Self::try_from(value.to_owned())
-    }
+#[derive(Debug, thiserror::Error)]
+pub enum ParseSubscriberNameError {
+    #[error("subscriber name cannot be empty or whitespaces")]
+    EmptyOrWhitespace,
+    #[error("subscriber name too long")]
+    TooLong,
+    #[error("subscriber name contains forbidden characters")]
+    ForbiddenCharacters,
 }
 
-impl TryFrom<String> for SubscriberName {
-    type Error = String;
+impl std::str::FromStr for SubscriberName {
+    type Err = ParseSubscriberNameError;
 
-    fn try_from(value: String) -> Result<Self, Self::Error> {
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
         const MAXIMUM_LENGTH: usize = 256;
         const FORBIDDEN_CHARACTERS: &[char] = &['/', '(', ')', '"', '<', '>', '\\', '{', '}'];
 
-        let is_empty_or_whitespace = value.trim().is_empty();
-        let is_tool_long = value.graphemes(true).count() > MAXIMUM_LENGTH;
-        let contains_forbidden_characters =
-            value.chars().any(|c| FORBIDDEN_CHARACTERS.contains(&c));
-
-        if is_empty_or_whitespace || is_tool_long || contains_forbidden_characters {
-            Err(format!("{} is not a valid subscriber name.", value))
-        } else {
-            Ok(Self(value))
+        if s.trim().is_empty() {
+            return Err(ParseSubscriberNameError::EmptyOrWhitespace);
         }
+        if s.graphemes(true).count() > MAXIMUM_LENGTH {
+            return Err(ParseSubscriberNameError::TooLong);
+        }
+        if s.chars().any(|c| FORBIDDEN_CHARACTERS.contains(&c)) {
+            return Err(ParseSubscriberNameError::ForbiddenCharacters);
+        }
+
+        Ok(Self(s.to_string()))
+    }
+}
+
+impl std::fmt::Display for SubscriberName {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
     }
 }
 
@@ -45,36 +55,36 @@ mod tests {
     #[test]
     fn a_256_grapheme_long_name_is_valid() {
         let name = "a".repeat(256);
-        assert_ok!(SubscriberName::try_from(name));
+        assert_ok!(name.parse::<SubscriberName>());
     }
 
     #[test]
     fn a_name_longer_than_256_graphemes_is_rejected() {
         let name = "a".repeat(257);
-        assert_err!(SubscriberName::try_from(name));
+        assert_err!(name.parse::<SubscriberName>());
     }
 
     #[test]
     fn whitespace_only_names_are_rejected() {
         let name = " ".to_string();
-        assert_err!(SubscriberName::try_from(name));
+        assert_err!(name.parse::<SubscriberName>());
     }
     #[test]
     fn empty_string_is_rejected() {
         let name = "".to_string();
-        assert_err!(SubscriberName::try_from(name));
+        assert_err!(name.parse::<SubscriberName>());
     }
 
     #[test]
     fn names_containing_an_invalid_character_are_rejected() {
         for name in &['/', '(', ')', '"', '<', '>', '\\', '{', '}'] {
             let name = name.to_string();
-            assert_err!(SubscriberName::try_from(name));
+            assert_err!(name.parse::<SubscriberName>());
         }
     }
     #[test]
     fn a_valid_name_is_parsed_successfully() {
         let name = "Ursula Le Guin".to_string();
-        assert_ok!(SubscriberName::try_from(name));
+        assert_ok!(name.parse::<SubscriberName>());
     }
 }

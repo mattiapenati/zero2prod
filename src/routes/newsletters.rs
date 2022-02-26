@@ -1,56 +1,20 @@
-use std::fmt;
-
 use anyhow::Context;
-use axum::{extract::Extension, Json};
+use axum::{extract::Extension, response::IntoResponse, Json};
 use http::StatusCode;
 use serde::Deserialize;
 use sqlx::PgPool;
 
-use crate::{
-    domain::SubscriberEmail,
-    email_client::EmailClient,
-    error::{Error, ResponseError},
-};
-
-#[derive(Deserialize)]
-pub struct BodyData {
-    title: String,
-    content: Content,
-}
-
-#[derive(Deserialize)]
-pub struct Content {
-    html: String,
-    text: String,
-}
-
-#[derive(thiserror::Error)]
-pub enum PublishError {
-    #[error(transparent)]
-    UnexpectedError(#[from] anyhow::Error),
-}
-
-impl fmt::Debug for PublishError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        fmt::Display::fmt(self, f)
-    }
-}
-
-impl ResponseError for PublishError {
-    fn status_code(&self) -> http::StatusCode {
-        StatusCode::INTERNAL_SERVER_ERROR
-    }
-}
+use crate::{domain::EmailAddress, email_client::EmailClient};
 
 // Dummy implementation
-pub async fn publish_newsletter(
+pub async fn handler(
     Json(body): Json<BodyData>,
     Extension(pool): Extension<PgPool>,
     Extension(email_client): Extension<EmailClient>,
 ) -> Result<(), Error> {
     let subscribers = get_confirmed_subscribers(&pool)
         .await
-        .map_err(PublishError::UnexpectedError)?;
+        .map_err(Error::UnexpectedError)?;
 
     for subscriber in subscribers {
         match subscriber {
@@ -66,7 +30,7 @@ pub async fn publish_newsletter(
                     .with_context(|| {
                         format!("Failed to send newsletter issue to {}", subscriber.email)
                     })
-                    .map_err(PublishError::UnexpectedError)?;
+                    .map_err(Error::UnexpectedError)?;
             }
             Err(error) => {
                 tracing::warn!(
@@ -80,8 +44,36 @@ pub async fn publish_newsletter(
     Ok(())
 }
 
+#[derive(Debug, Deserialize)]
+pub struct BodyData {
+    title: String,
+    content: Content,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct Content {
+    html: String,
+    text: String,
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum Error {
+    #[error(transparent)]
+    UnexpectedError(#[from] anyhow::Error),
+}
+
+impl IntoResponse for Error {
+    fn into_response(self) -> axum::response::Response {
+        match self {
+            Error::UnexpectedError(source) => {
+                (StatusCode::INTERNAL_SERVER_ERROR, source.to_string()).into_response()
+            }
+        }
+    }
+}
+
 struct ConfirmedSubscriber {
-    email: SubscriberEmail,
+    email: EmailAddress,
 }
 
 #[tracing::instrument(name = "Get confirmed subscribers", skip(pool))]
@@ -94,7 +86,8 @@ async fn get_confirmed_subscribers(
             .await?
             .into_iter()
             .map(|r| {
-                SubscriberEmail::try_from(r.email)
+                r.email
+                    .parse::<EmailAddress>()
                     .map(|email| ConfirmedSubscriber { email })
                     .map_err(|e| anyhow::anyhow!(e))
             })

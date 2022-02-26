@@ -58,10 +58,16 @@ impl Application {
             .into_inner();
 
         let app = Router::new()
-            .route("/health_check", routing::get(routes::health_check))
-            .route("/subscriptions", routing::post(routes::subscribe))
-            .route("/subscriptions/confirm", routing::get(routes::confirm))
-            .route("/newsletters", routing::post(routes::publish_newsletter))
+            .route("/health_check", routing::get(routes::health_check::handler))
+            .route(
+                "/subscriptions",
+                routing::post(routes::subscriptions::handler),
+            )
+            .route(
+                "/subscriptions/confirm",
+                routing::get(routes::subscriptions::confirm::handler),
+            )
+            .route("/newsletters", routing::post(routes::newsletters::handler))
             .layer(middleware);
 
         let listener = TcpListener::bind(&settings.application.address()).unwrap();

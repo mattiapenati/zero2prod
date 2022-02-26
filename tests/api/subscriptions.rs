@@ -40,7 +40,7 @@ async fn subscribe_persists_the_new_subscriber() {
 }
 
 #[tokio::test]
-async fn subscribe_returns_a_400_when_data_is_missing() {
+async fn subscribe_returns_a_422_when_data_is_missing() {
     let app = spawn_app().await;
 
     let test_cases = vec![
@@ -54,15 +54,15 @@ async fn subscribe_returns_a_400_when_data_is_missing() {
 
         assert_eq!(
             response.status().as_u16(),
-            400,
-            "The API did not fail with 400 Bad Request when the payload was {}.",
+            422,
+            "The API did not fail with 422 Unprocessable Entity when the payload was {}.",
             error_message,
         );
     }
 }
 
 #[tokio::test]
-async fn subscribe_returns_a_200_when_fields_are_present_but_empty() {
+async fn subscribe_returns_a_422_when_fields_are_present_but_empty() {
     let app = spawn_app().await;
 
     let test_cases = vec![
@@ -76,8 +76,8 @@ async fn subscribe_returns_a_200_when_fields_are_present_but_empty() {
 
         assert_eq!(
             response.status().as_u16(),
-            400,
-            "The API did not return a 400 Bad Request when the payload was {}.",
+            422,
+            "The API did not return a 422 Unprocessable Entity when the payload was {}.",
             description
         );
     }

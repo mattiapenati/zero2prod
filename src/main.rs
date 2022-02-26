@@ -1,28 +1,28 @@
+use clap::Parser;
 use sqlx::postgres::PgPoolOptions;
-use structopt::StructOpt;
 use zero2prod::{
     configuration::get_configuration,
     startup::Application,
     telemetry::{get_subscriber, init_subscriber},
 };
 
-#[derive(StructOpt)]
+#[derive(Parser)]
 struct Migrate {
     /// It will retry this number of times before giving up
-    #[structopt(long, default_value = "0")]
+    #[clap(long, default_value = "0")]
     retry: u64,
 
     /// Make migration sleep this amount of time before each retry
-    #[structopt(long, default_value = "0")]
+    #[clap(long, default_value = "0")]
     retry_delay: u64,
 
     /// Maximum time in seconds that you allow connection to take
-    #[structopt(long, default_value = "2")]
+    #[clap(long, default_value = "2")]
     timeout: u64,
 }
 
-#[derive(StructOpt)]
-enum Opt {
+#[derive(Parser)]
+enum Args {
     /// Execute database migration
     Migrate(Migrate),
     /// Run the service
@@ -71,9 +71,9 @@ async fn main() -> hyper::Result<()> {
     let subscriber = get_subscriber("zero2prod", "info", std::io::stdout);
     init_subscriber(subscriber);
 
-    match Opt::from_args() {
-        Opt::Migrate(opt) => migrate(opt).await,
-        Opt::Serve => run().await?,
+    match Args::parse() {
+        Args::Migrate(opt) => migrate(opt).await,
+        Args::Serve => run().await?,
     }
     Ok(())
 }

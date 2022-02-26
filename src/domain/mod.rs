@@ -1,7 +1,5 @@
-mod new_subscriber;
-mod subscriber_email;
-mod subscriber_name;
+pub mod email_address;
+pub mod subscriber_name;
 
-pub use new_subscriber::NewSubscriber;
-pub use subscriber_email::SubscriberEmail;
+pub use self::email_address::EmailAddress;
 pub use subscriber_name::SubscriberName;
