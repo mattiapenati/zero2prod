@@ -1,4 +1,5 @@
 use crate::{
+    authentication::PasswordAuthentication,
     configuration::{DatabaseSettings, Settings},
     email_client::EmailClient,
     request_id::{AddRequestIdLayer, MakeSpanWithRequestId, UseRequestId},
@@ -8,9 +9,10 @@ use crate::{
 use std::{net::TcpListener, time::Duration};
 
 use axum::{routing, AddExtensionLayer, Router};
+use http::header;
 use sqlx::postgres::{PgPool, PgPoolOptions};
 use tower::ServiceBuilder;
-use tower_http::{trace::TraceLayer, ServiceBuilderExt};
+use tower_http::{auth::AsyncRequireAuthorizationLayer, trace::TraceLayer, ServiceBuilderExt};
 use tracing::Level;
 
 pub struct Application {
@@ -44,6 +46,7 @@ impl Application {
         let application_base_url = ApplicationBaseUrl(settings.application.base_url.clone());
 
         let middleware = ServiceBuilder::new()
+            .sensitive_headers([header::AUTHORIZATION])
             .layer(AddRequestIdLayer)
             .layer(
                 TraceLayer::new_for_http()
@@ -67,7 +70,12 @@ impl Application {
                 "/subscriptions/confirm",
                 routing::get(routes::subscriptions::confirm::handler),
             )
-            .route("/newsletters", routing::post(routes::newsletters::handler))
+            .route(
+                "/newsletters",
+                routing::post(routes::newsletters::handler).route_layer(
+                    AsyncRequireAuthorizationLayer::new(PasswordAuthentication::new("publish")),
+                ),
+            )
             .layer(middleware);
 
         let listener = TcpListener::bind(&settings.application.address()).unwrap();

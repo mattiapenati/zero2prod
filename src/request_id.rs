@@ -156,6 +156,8 @@ impl<B> tower_http::trace::MakeSpan<B> for MakeSpanWithRequestId {
                         uri = %req.uri(),
                         version = ?req.version(),
                         request_id = %request_id,
+                        username = tracing::field::Empty,
+                        user_id = tracing::field::Empty,
                     )
                 } else {
                     tracing::span!(
@@ -164,6 +166,8 @@ impl<B> tower_http::trace::MakeSpan<B> for MakeSpanWithRequestId {
                         method = %req.method(),
                         uri = %req.uri(),
                         version = ?req.version(),
+                        username = tracing::field::Empty,
+                        user_id = tracing::field::Empty,
                     )
                 }
             }

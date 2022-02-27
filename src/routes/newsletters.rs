@@ -6,7 +6,6 @@ use sqlx::PgPool;
 
 use crate::{domain::EmailAddress, email_client::EmailClient};
 
-// Dummy implementation
 pub async fn handler(
     Json(body): Json<BodyData>,
     Extension(pool): Extension<PgPool>,
